@@ -3,6 +3,7 @@ import { enviroments } from '../../../environments/environments';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { catchError, map, Observable, of, tap, throwError } from 'rxjs';
 import { AuthStatus, CheckTokenResponse, LoginResponse, User } from '../interfaces';
+import { RegisterRequestInterface } from '../interfaces/register.interface';
 
 @Injectable({
   providedIn: 'root',
@@ -42,11 +43,23 @@ export class AuthService {
     );
   }
 
+  public register( payload: RegisterRequestInterface ):Observable<boolean> {
+
+    const url = `${this.baseURL}/auth/register`;
+    return this.http.post<LoginResponse>(url, payload).pipe(
+      map(({ user, token }) => this.setAuthentication(user, token)),
+      catchError((err) => throwError(() => err.error.message))
+    )
+  }
+
   public checkAuthStatus(): Observable<boolean> {
     const url = `${this.baseURL}/auth/check-token`;
     const token = localStorage.getItem('token');
 
-    if (!token) return of(false);
+    if (!token) {
+      this.logout()
+      return of(false)
+    };
 
     const headers = new HttpHeaders()
       .set('Authorization', `Bearer ${token}`)
@@ -61,4 +74,11 @@ export class AuthService {
       })
     )
   }
+
+  public logout(): void {
+    localStorage.removeItem('token');
+    this._curretUser.set(null);
+    this._authStatus.set(AuthStatus.notAuthenticated);
+  }
+
 }
